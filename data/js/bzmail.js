@@ -204,7 +204,6 @@ function tweak (msg) {
 function loadGmonkey() {
   if (unsafeWindow.gmonkey) {
     unsafeWindow.gmonkey.load("2.0", function(gmail) {
-      var msg = new gmail.GmailMessage();
       gmail.registerMessageViewChangeCallback(function (message) {
         if (!message.isCollapsed() && !message.bugmail_tweaked) {
           tweak(message);
