@@ -25,6 +25,6 @@ for f in files:
 
 # Write out JSON
 result = json.dumps(result)
-file("data/test-msgs.js", "w").write(result);
+file("data/test-msgs.json", "w").write(result);
 
 
