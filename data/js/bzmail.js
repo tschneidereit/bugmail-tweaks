@@ -1,42 +1,66 @@
 "use strict";
 
 let currentBugId;
-let currentConversation;
+let processedMailIds = {};
 
-function processMails(conversation) {
+function processMails(conversation, delayProcessing) {
   if (!conversation.querySelector('span[email*="bugzilla-daemon"]'))
     return;
-  //gmail delays adding all messages except the first 5
-  setTimeout(function(){
-    currentConversation = conversation.querySelectorAll('.ii.gt');
-    Array.prototype.forEach.call(currentConversation, processMail);
-  }, 500);
+  //gmail delays adding all messages except the first 5, so we have to delay processing
+  if (delayProcessing)
+    setTimeout(delayedMailsProcessing, 500, conversation);
+  else
+    delayedMailsProcessing(conversation);
 }
 
-function processMail(element, index) {
-  if (element.bugmail_tweaked)
+function delayedMailsProcessing(conversation) {
+  let mails = conversation.querySelectorAll('.ii.gt');
+  Array.prototype.forEach.call(mails, processMail);
+}
+
+function processMail(element) {
+  if (!element.id || processedMailIds[element.id])
     return;
-  element.bugmail_tweaked = true;
+  processedMailIds[element.id] = element;
   const content = element.innerHTML;
-  const match = /http.+?show_bug\.cgi\?id=(\d+)/.exec(content);
+  const match = /(http.+?)show_bug\.cgi\?id=(\d+)/.exec(content);
   if (!match)
     return;
-  currentBugId = match[1];
-  self.port.emit('bugmailFound', {id: currentBugId, index : index, content: content});
+  currentBugId = match[2];
+  self.port.emit('bugmailFound', 
+    {bzWeb : match[1], bugId: currentBugId, id : element.id, content: content});
 }
 
 function replaceContent(data) {
-  if (data.id !== currentBugId)
+  if (data.bugId !== currentBugId)
     return;
-  currentConversation[data.index].innerHTML = data.content;
+  //As we're processing the email's content on a textual basis, there's really no way to set the 
+  //new content without using innerHTML.
+  processedMailIds[data.id].innerHTML = data.content;
+  processedMailIds[data.id] = true;
 }
 
 function loadGmonkey() {
   if (unsafeWindow.gmonkey) {
     unsafeWindow.gmonkey.load(2, function(gmail) {
+      //Workaround for some gmail instances not supporting all API functions
       gmail.registerViewChangeCallback(function() {
-        if (gmail.getActiveViewType() === 'cv')
-          processMails(gmail.getActiveViewElement());
+        if (gmail.getActiveViewType() === 'cv') {
+          processedMailIds = {};
+          processMails(gmail.getActiveViewElement(), !gmail.registerMessageViewChangeCallback);
+        }
+        else
+          processedMailIds = null;
+      });
+      if (!gmail.registerMessageViewChangeCallback)
+        return;
+      gmail.registerMessageViewChangeCallback(function(message) {
+        if (!message || !message.getContentElement() || !message.getContentElement().parentElement 
+          || message.getFromAddress().indexOf('bugzilla-daemon') < 0)
+        {
+          return;
+        }
+        processMail(message.getContentElement().parentElement);
       });
     });
   }

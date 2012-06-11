@@ -5,5 +5,12 @@
     "contributors" : ["Till Schneidereit (http://www.tillschneidereit.de) <tschneidereit@gmail.com>"],
     "version": "0.3", 
     "fullName": "Bugmail Tweaks", 
-    "id": "jid0-86fN5AegPXB2C1BDQv53aTcG4rA"
+    "id": "jid0-86fN5AegPXB2C1BDQv53aTcG4rA",
+    "preferences": [{
+        "name": "redirectBugmailUrls",
+        "title": "Redirect Bugmail URLs",
+        "description": "Automatically redirect URLs of Bugmail threads when manually entered into the location bar",
+        "type": "bool",
+        "value": true
+    }]
 }
